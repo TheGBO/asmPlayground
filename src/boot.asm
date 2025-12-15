@@ -38,10 +38,10 @@ putc:
 main:
 	;limpar a tela caso a placa mãe ou o fabricante coloque algum texto
 	mov ah, 0x00
-	mov al, 0x03   ; modo texto 80x25
+	mov al, 0x02   ; modo texto 80x25
 	int 0x10
+
 	; imprimir caractere '>'
-	
 	mov cl, '>'
 	call putc
 
