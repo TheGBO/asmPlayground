@@ -3,11 +3,7 @@
 - O que é isso?
 > O objetivo deste repositório é aprender e "brincar" com assembly real mode de 16 bits e a BIOS 
 
-<img src="assets/WrittenByAHuman_02.svg"></img>
-<img src="assets/HumanContent_07.svg"></img>
-<img src="assets/MadeByAHuman_03.svg"></img>
-
-*código e documentações escritas por um humano (eu :D)*
+*código e documentações escritas por um humano (eu :D) (correção de bug por IA porque eu nao tenho ninguem pra me ensinar :C)* 
 
 ---
 <br>

@@ -6,6 +6,7 @@ read -r -p "Tem certeza do que está fazendo? [y/n]" response
 
 if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]
 then
+    sudo umount /dev/sdb* 2>/dev/null
     sudo dd if=bin/disk.img of=/dev/sdb bs=512 conv=notrunc status=progress
 else
     exit

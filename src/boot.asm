@@ -1,65 +1,75 @@
-;stack e entrada de teclado
-
 bits 16
 org 0x7c00
 
-cli            ; desativa interrupções
-xor ax, ax     ; zera o registrador AX
-mov ss, ax     ; zera o segmento da stack
-mov sp, 0x7e00 ; coloca 0x7e00 como o início do ponteiro da stack
-; -------------- eu inicialmente havia colocado 0x7c00, mas há um risco da stack sobrescrever dados do programa,
-; -------------- desta forma, desloquei em 0x200 (512 bytes), exatamente o tamanho do setor de boot 
-sti            ; reativa interrupções
+cli 
+xor ax, ax
+mov es, ax
+mov ds, ax
+mov ss, ax
+mov bp, 0x8000
+mov sp, bp
+mov bx, 0x7e00
+sti
 
-jmp main ;pula para a rotina principal
-
-;-=-=-=[IMPORTANTE. TIPO. *MUITO* IMPORTANTE. MESMO.]=-=-=-
-; BX, BL E BH SÃO O MESMO REGISTRADOR
-; O MESMO VALE PARA QUALQUER UM, TIPO AX, AL E AH
-; (R)X, (R)L, (R)H 
+jmp bootloaderMain
+; --- Definições de variáveis
+bootDisk: db 0
+bootloaderMsg: db "Carregando Xinforinfola OS (TM)...", 13, 10, 0
+diskErrMsg: db "Leitura de disco falhou :(", 13, 10, 0
+kernelLoadMsg: db "Efetuando leitura de kernel para a memoria...", 13, 10, 0
 ; ---
-; apesar de serem o mesmo registrador, os valores são diferentes, estamos trabalhando em 16 bits
-; utilizando o exemplo do registrador B
-; vamos supor que eu coloque o número "0xB1FE" em BX
-; BX => o registrador inteiro, todos os 16 bits (B1FE)
-; BH => os 8 bits "altos"  (B1)
-; BL => os 8 bits "baixos" (FE)
 
-;
-putc:
-	push cx      ;salva o valor do registrador cx na memória stack
-	mov ah, 0x0e ;opcode de video
-	mov bh, 0x00 ;página de vídeo 0
-	mov al, cl   ;coloca o caractere guardado em cl em al
-	int 0x10     ; imprime o caractere guardado em al (previamente em cl)
-	pop cx       ;restaura valor anterior de cx
+; ===
+
+; --- Definições de funções
+clStr:
+	mov ah, 0x00
+	mov al, 0x03
+	int 0x10
 	ret
 
-main:
-	;limpar a tela caso a placa mãe ou o fabricante coloque algum texto
-	mov ah, 0x00
-	mov al, 0x02   ; modo texto 80x25
+
+printStr:
+	pusha ;push all
+	mov ah, 0x0e
+.iter: ; al = [SI], SI++
+	lodsb ; uma forma mais fácil de imprimir strings que descobri recentemente
+	cmp al, 0
+	je .end
 	int 0x10
+	jmp .iter
+.end:
+	popa
+	ret
+; ---
 
-	; imprimir caractere '>'
-	mov cl, '>'
-	call putc
+bootloaderMain:
+	call clStr
 
-readLoop:
-	mov cl, 0
-	mov ah, 0    ; Opcode de ler do teclado
-	int 0x16     ; Chamada para a BIOS performar tal operação
+	mov si, bootloaderMsg
+	call printStr
 
-	cmp al, 0    ; evita que um caractere nulo seja impresso.
-	je readLoop
+	mov [bootDisk], dl
+	mov ah, 2          
+	mov al, 1          
+	mov ch, 0          
+	mov cl, 2          
+	mov dh, 0          
+	mov dl, [bootDisk] 
+	int 0x13
+	jnc .readDiskOK
+	jc .readDiskERR
+	jmp $
 
-	mov cl, al   ; coloca a tecla lida (vai para AL) em cl, parametro da função putc
-	call putc    ; chama putc!
+.readDiskOK:
+	mov si, kernelLoadMsg
+	call printStr
+	jmp 0x7e00
 
-	jmp readLoop
-
-jmp $        ; 'Pausa' a execução do programa
-
+.readDiskERR:
+	mov si, diskErrMsg
+	call printStr
+	jmp $
 
 times 510 - ($ - $$) db 0
 dw 0xAA55
