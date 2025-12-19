@@ -12,4 +12,4 @@ dd if=bin/boot.bin of=bin/disk.img bs=512 seek=0 conv=notrunc
 dd if=bin/kernel.bin of=bin/disk.img bs=512 seek=1 conv=notrunc
 
 #rodar o código
-qemu-system-i386 bin/disk.img
+qemu-system-i386 -drive format=raw,file=bin/disk.img 
