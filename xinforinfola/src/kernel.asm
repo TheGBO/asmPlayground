@@ -49,35 +49,84 @@ installSysCallHandler:
     ret
 
 ; 0x1F = syscall
-; AX = opcode
-; DX = parametro
+; ------+-----------------+----------------+
+; Reg.  | MODO ENTRADA    |  MODO SAÍDA    |
+; AX    | opcode          | Código de erro | (0 = ok, 1 = erro) 
+; BX    | parametro 1     |       ?        |
+; CX    | parametro 2     |       ?        |
+; DX    | parametro 3     |       ?        |  
+; ------------------------+-----------------
 syscallHandler:
     push ds ;preserva segmento de dados
     pusha
 
-    mov bx, ax ;salva o opcode passado em AX em BX
+    push cs
+    pop ds     ; DS = CS
 
-    mov ax, cs ;guarda code segment em ax
-    mov ds, ax ;data segment = code segment
-
-    ; 0x0001 - print logo
-    cmp bx, 0x0001
+    ; 0x1 - print logo
+    cmp ax, 0x1
     je _logoPrint
-    ; 0x0002 - print proposito geral (string precisa terminar em 0)
-    cmp bx, 0x0002
-    je _gpPrint
+
+    ; 0x2 - print proposito geral (string precisa terminar em 0)
+    cmp ax, 0x2
+    je _sysPrint
+
+    ; 0x3 - print unico caractere
+    cmp ax, 0x3
+    je _sysPrintChar
+
+    ; 0x4 - limpa tela
+    cmp ax, 0x4
+    je _sysCls
+
+    ; 0x05 - posição do cursor
+    cmp ax, 0x5
+    je _sysCursorPos
 
     ;fim da rotina principal do handler
     mov si, invalidOpcodeMsg
     call printStr
+    mov ax, 1
     jmp _syscallHandlerEnd
+;0x1
+;sem parametros
 _logoPrint:
     mov si, xinforinfolaLogo
     call printStr
+    xor ax, ax; sucesso
     jmp _syscallHandlerEnd
-_gpPrint:
-    mov si, dx
+;0x2
+;BX = endereço de memoria da string
+_sysPrint:
+    mov si, bx
     call printStr
+    xor ax, ax
+    jmp _syscallHandlerEnd
+;0x3
+;BL = caractere a ser impresso
+_sysPrintChar:
+    mov ah, 0x0e
+    mov al, bl
+    int 0x10
+    xor ax, ax
+    jmp _syscallHandlerEnd
+;0x4
+_sysCls:
+	mov ah, 0x00
+	mov al, 0x03
+	int 0x10
+    xor ax, ax
+    jmp _syscallHandlerEnd
+;0x5 
+; BX = cursor X
+; CX = cursor Y
+_sysCursorPos:
+    mov ah, 0x02
+    mov dl, bl
+    mov dh, cl
+    mov bh, 0
+    int 0x10
+    xor ax, ax
     jmp _syscallHandlerEnd
 _syscallHandlerEnd:
     popa
@@ -120,18 +169,12 @@ kernelMain:
 ;-- instala serviços básicos
     call installSysCallHandler
 ;-- mensagem inicial
-    mov si, msg
-    call printStr
-
     ; imprime a logo xinforinfola
-    mov ax, 0x0001
+    mov ax, 0x1
     int 0x1f
 
-    ;imprime uma mensagem
-    mov ax, 0x0002
-    mov dx, hwmsg
-    
+    mov ax, 0x02
+    mov bx, msg
     int 0x1f
+
 jmp $
-
-hwmsg: db "Hello, World!", 0
